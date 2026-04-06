@@ -1,0 +1,64 @@
+# Pipeline name
+name: kevin_quiz4_ci_dotnet
+
+
+trigger:
+- main
+
+# Pool de agents
+pool:
+
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  projectPath: 'QuizApp/QuizApp.csproj'
+
+stages:
+- stage: Build
+  displayName: 'Build and Publish'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build .NET Application'
+    steps:
+    
+    # Step 1: Install .NET SDK
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK 8.x'
+      inputs:
+        packageType: 'sdk'
+        version: '8.x'
+        installationPath: $(Agent.ToolsDirectory)/dotnet
+    
+    # Step 2: Restore dependencies
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore NuGet packages'
+      inputs:
+        command: 'restore'
+        projects: '$(projectPath)'
+    
+    # Step 3: Build the application
+    - task: DotNetCoreCLI@2
+      displayName: 'Build application'
+      inputs:
+        command: 'build'
+        projects: '$(projectPath)'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+    
+    # Step 4: Publish the application
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish application'
+      inputs:
+        command: 'publish'
+        projects: '$(projectPath)'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory) --no-build'
+        publishWebProjects: false
+        zipAfterPublish: true
+    
+    # Step 5: Publish build artifacts
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish artifacts to pipeline'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
